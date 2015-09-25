@@ -52,7 +52,7 @@
     remote_user: vagrant
     become: yes
     become_user: postgres
-    postgresql_lang: db=book lang=plpgsql state=present
+    postgresql_lang: db=book lang=plpgsql state=present trust=yes
     tags:
         - sql
 
@@ -60,7 +60,7 @@
     remote_user: vagrant
     become: yes
     become_user: postgres
-    command: psql -d book -f /usr/share/pgsql/contrib/{{item}}.sql
+    postgresql_ext: name={{item}} db=book
     with_items:
         - tablefunc
         - dict_xsyn
