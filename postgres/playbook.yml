@@ -1,0 +1,70 @@
+---
+- hosts: 127.0.0.1
+  tasks:
+  - name: add packages
+    sudo: yes
+    yum: pkg={{item}} state=latest
+    with_items:
+        - vim
+        - postgresql-server
+        - postgresql-devel
+        - postgresql-contrib
+        - python-devel
+        - python-setuptools
+
+  - name: add Development Tools
+    sudo: yes
+    yum: name="@Development Tools" state=present
+
+  - name: Install pip for Python
+    sudo: yes
+    easy_install: name=pip
+
+  - name: Install psycopg2 for Python / PostgreSQL
+    sudo: yes
+    pip: name=psycopg2
+
+  - name: Initialize postgres
+    sudo: yes
+    command: service postgresql initdb
+    args:
+        creates: /var/lib/pgsql/data/pg_hba.conf
+
+  - name: Start postgres
+    sudo: yes
+    service: name=postgresql state=started
+
+  - name: Set postgres to start on boot
+    sudo: yes
+    service: name=postgresql enabled=yes
+
+  - name: Create vagrant ROLE in postgres
+    remote_user: vagrant
+    become: yes
+    become_user: postgres
+    postgresql_user: name=vagrant role_attr_flags=CREATEROLE,CREATEDB,LOGIN
+
+  - name: Create book db
+    remote_user: vagrant
+    postgresql_db: name=book login_user=vagrant
+
+  - name: Add PL/pgSQL to book db
+    remote_user: vagrant
+    become: yes
+    become_user: postgres
+    postgresql_lang: db=book lang=plpgsql state=present
+    tags:
+        - sql
+
+  - name: add postgres extensions
+    remote_user: vagrant
+    become: yes
+    become_user: postgres
+    command: psql -d book -f /usr/share/pgsql/contrib/{{item}}.sql
+    with_items:
+        - tablefunc
+        - dict_xsyn
+        - fuzzystrmatch
+        - pg_trgm
+        - cube
+
