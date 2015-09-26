@@ -1,0 +1,107 @@
+---
+- hosts: 127.0.0.1
+  tasks:
+  - name: add PostgresSQL repo
+    sudo: yes
+    yum: state=present name=http://yum.postgresql.org/9.4/redhat/rhel-7-x86_64/pgdg-centos94-9.4-1.noarch.rpm
+
+  - name: add packages
+    sudo: yes
+    yum: pkg={{item}} state=latest
+    with_items:
+        - vim
+        - python-devel
+        - python-setuptools
+        - postgresql94-server
+        - postgresql94-devel
+        - postgresql94-contrib
+
+  - name: add Development Tools
+    sudo: yes
+    yum: name="@Development Tools" state=present
+
+  - name: link remaining PostgreSQL commands into PATH
+    sudo: yes
+    file: src=/usr/pgsql-9.4/bin/{{item}} dest=/usr/bin/{{item}} state=link
+    with_items:
+        - ecpg
+        - initdb
+        - oid2name
+        - pg_archivecleanup
+        - pgbench
+        - pg_config
+        - pg_controldata
+        - pg_ctl
+        - pg_isready
+        - pg_receivexlog
+        - pg_recvlogical
+        - pg_resetxlog
+        - pg_standby
+        - pg_test_fsync
+        - pg_test_timing
+        - pg_upgrade
+        - pg_xlogdump
+        - vacuumlo
+
+  - name: Install pip for Python
+    sudo: yes
+    easy_install: name=pip
+
+  - name: Install psycopg2 for Python / PostgreSQL
+    sudo: yes
+    pip: name=psycopg2
+
+  - name: Initialize postgres
+    remote_user: vagrant
+    become: yes
+    become_user: postgres
+    command: initdb -D /var/lib/pgsql/9.4/data --encoding=UTF8
+    args:
+        creates: /var/lib/pgsql/9.4/data/PG_VERSION
+
+  # Set to trust connection from 10.0.2.2; which, for my Vagrant/NAT setup is
+  # the host OS machine.
+  - name: configure Postgres to accept connection from host OS
+    remote_user: vagrant
+    become: yes
+    become_user: postgres
+    copy: dest=/var/lib/pgsql/9.4/data/{{item}} src={{item}}
+    with_items:
+        - pg_hba.conf
+        - postgresql.conf
+
+  - name: Start postgres
+    sudo: yes
+    service: name=postgresql-9.4 state=started
+
+  - name: Set postgres to start on boot
+    sudo: yes
+    service: name=postgresql-9.4 enabled=yes
+
+  - name: add adminpack extension to postgres and template1 DBs
+    remote_user: vagrant
+    become: yes
+    become_user: postgres
+    postgresql_ext: name=adminpack db={{item}}
+    with_items:
+        - postgres
+        - template1
+
+  - name: Create vagrant ROLE in postgres
+    remote_user: vagrant
+    become: yes
+    become_user: postgres
+    postgresql_user: name=vagrant role_attr_flags=CREATEROLE,CREATEDB,LOGIN
+
+  - name: Create book db
+    remote_user: vagrant
+    postgresql_db: name=book login_user=vagrant
+
+  - name: Install extensions in book db
+    remote_user: vagrant
+    become: yes
+    become_user: postgres
+    shell: psql book </vagrant/add_extensions.sql && touch /var/lib/pgsql/book_extensions_added
+    args:
+        creates: /var/lib/pgsql/book_extensions_added
+
