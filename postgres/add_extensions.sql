@@ -1,5 +1,3 @@
-\connect book
-
 create schema if not exists ext;
 GRANT ALL ON SCHEMA ext TO PUBLIC;
 
