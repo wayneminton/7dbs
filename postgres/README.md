@@ -5,7 +5,7 @@
 - [x] Set database encoding to UTF-8, not SQL ASCII
 - [x] Setup adminpack into maintenance DB for pgadmin enhancement
 - [x] Demonstrate flyway usage
-- [ ] Demonstrate use of pgcrypt extension
+- [x] Demonstrate use of pgcrypt extension
 
 # Database book setup
 
@@ -48,6 +48,12 @@ The book_data.sql script had a couple of flaws:
 
 # pgcrypt
 
-* Once setup, what does a pgdump result in?  How are keys managed?
+* Once setup, what does a pgdump result in?
 
+Encrypted data.
+
+* How are keys managed?
+
+Using the GPG / PGP client.  Keys can be exported; public keys can be saved in
+the DB if that's helpful.
 
